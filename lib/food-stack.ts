@@ -13,22 +13,25 @@ export class FoodStack extends Stack {
     super(scope, id, props);
 
     const recipeTable = new aws_dynamodb.Table(this, 'recipeTable', {
-      tableName: '',
+      tableName: 'recipeTable',
       partitionKey: {name: 'recipeId', type: aws_dynamodb.AttributeType.STRING},
       sortKey: {name: 'commentId', type: aws_dynamodb.AttributeType.STRING},
       removalPolicy: RemovalPolicy.DESTROY
     });
 
     const recipeImageBucket = new s3.Bucket(this, 'imageBucket', {
-      bucketName: 'recipeImage',
+      bucketName: 'recipe-image-jaylen',
+      removalPolicy: RemovalPolicy.DESTROY
     })
 
-    const profilePictureBucket = new s3.Bucket(this, 'imageBucket', {
-      bucketName: 'profilePicture'
+    const profilePictureBucket = new s3.Bucket(this, 'profileBucket', {
+      bucketName: 'profile-picture-jaylen',
+      removalPolicy: RemovalPolicy.DESTROY
     })
 
     const dynamodbRole = new iam.Role(this, 'DynamoDBRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com')
+    
     })
 
     const dynamoRecipePolicy = new iam.Policy(this, 'dynamoRecipePolicy', {
@@ -37,7 +40,7 @@ export class FoodStack extends Stack {
       statements: [
         new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
-          actions: ['dynamodb.*'],
+          actions: ['dynamodb:*'],
           resources: [recipeTable.tableArn]
         })
       ]
@@ -186,7 +189,7 @@ export class FoodStack extends Stack {
     addCorsOptions(singleRecipeEndpoints);
 
     const recipeCommentsEndpoint = singleRecipeEndpoints.addResource('comments');
-    const singleCommentRecipeEndpoint = recipeCommentsEndpoint.addResource('{id}')
+    const singleCommentRecipeEndpoint = recipeCommentsEndpoint.addResource('{comment_id}')
     const getCommentRecipeIntegration = new apiGateway.LambdaIntegration(getCommentsLambda);
     const postCommentRecipeIntegration = new apiGateway.LambdaIntegration(postCommentLambda);
     const updateCommentRecipeIntegration = new apiGateway.LambdaIntegration(updateCommentLambda);
