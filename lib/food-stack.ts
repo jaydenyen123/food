@@ -20,11 +20,11 @@ export class FoodStack extends Stack {
     });
 
     const recipeImageBucket = new s3.Bucket(this, 'imageBucket', {
-      bucketName: '',
+      bucketName: 'recipeImage',
     })
 
     const profilePictureBucket = new s3.Bucket(this, 'imageBucket', {
-      bucketName: ''
+      bucketName: 'profilePicture'
     })
 
     const dynamodbRole = new iam.Role(this, 'DynamoDBRole', {
@@ -54,6 +54,9 @@ export class FoodStack extends Stack {
       timeout: Duration.seconds(20),
       memorySize: 2048,
       role: dynamodbRole,
+      environment: {
+        TABLE_NAME: recipeTable.tableName
+      }
     })
 
     const postRecipeLambda = new NodejsFunction(this, 'postRecipe', {
@@ -155,14 +158,14 @@ export class FoodStack extends Stack {
       role: dynamodbRole,
     })
 
-    recipeTable.grantReadData(getRecipeLambda);
-    recipeTable.grantReadWriteData(postRecipeLambda);
-    recipeTable.grantReadWriteData(updateRecipeLambda);
-    recipeTable.grantReadWriteData(deleteRecipeLambda);
-    recipeTable.grantReadData(getCommentsLambda);
-    recipeTable.grantReadWriteData(postCommentLambda);
-    recipeTable.grantReadWriteData(updateCommentLambda);
-    recipeTable.grantReadWriteData(deleteCommentLambda);
+    // recipeTable.grantReadData(getRecipeLambda);
+    // recipeTable.grantReadWriteData(postRecipeLambda);
+    // recipeTable.grantReadWriteData(updateRecipeLambda);
+    // recipeTable.grantReadWriteData(deleteRecipeLambda);
+    // recipeTable.grantReadData(getCommentsLambda);
+    // recipeTable.grantReadWriteData(postCommentLambda);
+    // recipeTable.grantReadWriteData(updateCommentLambda);
+    // recipeTable.grantReadWriteData(deleteCommentLambda);
 
     const appApi = new apiGateway.RestApi(this, 'AppApi', {
       restApiName: 'foodApi'
