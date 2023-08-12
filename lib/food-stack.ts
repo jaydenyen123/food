@@ -15,7 +15,6 @@ export class FoodStack extends Stack {
     const recipeTable = new aws_dynamodb.Table(this, 'recipeTable', {
       tableName: 'recipeTable',
       partitionKey: {name: 'recipeId', type: aws_dynamodb.AttributeType.STRING},
-      sortKey: {name: 'commentId', type: aws_dynamodb.AttributeType.STRING},
       removalPolicy: RemovalPolicy.DESTROY
     });
 
