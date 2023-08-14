@@ -205,6 +205,7 @@ export class FoodStack extends Stack {
 
     const recipeLikeEndpoints = singleRecipeEndpoints.addResource('like');
     recipeLikeEndpoints.addMethod('POST', postRecipeLikesIntegration);
+    const deleteRecipeLikeEndpoints = recipeLikeEndpoints.addResource('{like_id}');
     recipeLikeEndpoints.addMethod('DELETE', deleteRecipeLikesIntegration);
     addCorsOptions(recipeLikeEndpoints);
   }
