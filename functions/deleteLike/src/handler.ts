@@ -32,20 +32,29 @@ export const deleteCommentAPIEvent = async (event: APIGatewayProxyEvent): Promis
             }
         })
         const response = await documentClient.send(getCommand);
-        const recipe = response.Item?[0];
+        let recipe : any;
+        if(response.Item)
+            recipe = response.Item[0];
         console.log('recipe: ');
         console.log(recipe);
-        for(let i = 0; i < recipe.comments.length; i++) {
-            if(recipe.comments[i].id === like_id)
-                recipe.comments.splice(i, 1);
+        const comments = recipe.comments;
+        for(let i = 0; i < comments.length; i++) {
+            if(comments[i].id === like_id)
+                comments.splice(i, 1);
         }
         const updateCommand = new UpdateCommand({
             TableName: process.env.TABLE_NAME,
-            AttributeUpdates: {
-
-            }
+            Key: {
+                recipeId: id
+            },
+            UpdateExpression: 'set comment = :comment',
+            ExpressionAttributeValues: {
+                ':comment': comments
+            },
+            ReturnValues: "ALL_NEW"
         })
-        const updateResponse = await documentClient.send(updateCommand); 
+        const updateResponse = await documentClient.send(updateCommand);
+        console.log(response); 
     } catch(e) {
         console.log(e);
         throw new Error('Error encountered');

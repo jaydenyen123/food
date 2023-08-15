@@ -1,6 +1,8 @@
 import {APIGatewayProxyEvent} from 'aws-lambda';
+import {DynamoDBDocumentClient, GetCommand, UpdateCommand} from "@aws-sdk/lib-dynamodb"; 
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient, GetCommand, UpdateCommand} from '@aws-sdk/lib-dynamodb'; 
+import { recipe } from '../../models/models';
+
 
 
 class HttpError extends Error {
@@ -32,19 +34,20 @@ export const deleteCommentAPIEvent = async (event: APIGatewayProxyEvent): Promis
             }
         })
         const response = await documentClient.send(getCommand);
-        const recipe = response.Items[0];
+        const body = response.Item;
         console.log('recipe: ');
+        const recipe = body;
         console.log(recipe);
-        for(let i = 0; i < recipe.comments.length; i++) {
-            if(recipe.comments[i].id === comment_id)
+        for(let i = 0; i < recipe?.comments.length; i++) {
+            if(recipe?.comments[i].id === comment_id)
                 recipe.comments.splice(i, 1);
         }
         const updateCommand = new UpdateCommand({
             TableName: process.env.TABLE_NAME,
-            Item: {
-                recipeId: id,
-                Content: recipe
-            }
+            Key: {
+                recipeId: id
+            },
+
         })
         const updateResponse = await documentClient.send(updateCommand); 
     } catch(e) {
