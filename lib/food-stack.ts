@@ -72,6 +72,10 @@ export class FoodStack extends Stack {
       timeout: Duration.seconds(20),
       memorySize: 2048,
       role: dynamodbRole,
+      environment: {
+        TABLE_NAME: recipeTable.tableName
+      },
+      logRetention: RetentionDays.ONE_DAY
     })
 
     const updateRecipeLambda = new NodejsFunction(this, 'updateRecipe', {

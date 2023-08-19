@@ -38,11 +38,17 @@ export const postRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise<a
         })
 
         const response = await documentClient.send(scanCommand);
-        return response;
+        return {
+            statusCode: 200,
+            body: JSON.stringify(response)
+        }
 
-    } catch(e) {
+    } catch(e: any) {
         console.log(e);
-        throw new Error('Error encountered');
+        return {
+            statusCode: 200,
+            body: e.message
+        }
     }
 
 }
