@@ -28,7 +28,9 @@ export const postRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise<a
         console.log('..........item');
         const recipe = {
             recipeId: uuidv4(),
-            ...body
+            ...body,
+            likes: [],
+            comments: []
         }
         console.log('Here is the recipe..............');
         console.log(recipe);

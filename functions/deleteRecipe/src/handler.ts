@@ -2,8 +2,6 @@ import {APIGatewayProxyEvent} from 'aws-lambda';
 import {DynamoDBDocumentClient, DeleteCommand} from "@aws-sdk/lib-dynamodb"; 
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 
-
-
 class HttpError extends Error {
     status: number
 }
@@ -32,10 +30,16 @@ export const deleteRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise
             }
         })
         const response = await documentClient.send(deleteCommand);
-        return response;
-    } catch(e) {
+        return {
+            statusCode: 200,
+            body: JSON.stringify(response)
+        }
+    } catch(e: any) {
         console.log(e);
-        throw new Error('Error encountered');
+        return {
+            statusCode: 400,
+            body: e.message
+        }
     }
 
 }

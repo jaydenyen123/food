@@ -47,6 +47,8 @@ export class FoodStack extends Stack {
 
     dynamodbRole.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(this, 'basicRole', 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'))  
 
+    const env = {TABLE_NAME: recipeTable.tableName};
+
     // Get recipe based on user, types, or all recipes
     const getRecipeLambda = new NodejsFunction(this, 'getRecipe', {
       runtime: lambda.Runtime.NODEJS_18_X,
@@ -57,9 +59,7 @@ export class FoodStack extends Stack {
       timeout: Duration.seconds(20),
       memorySize: 2048,
       role: dynamodbRole,
-      environment: {
-        TABLE_NAME: recipeTable.tableName
-      },
+      environment: env,
       logRetention: RetentionDays.ONE_DAY
     })
 
@@ -72,9 +72,7 @@ export class FoodStack extends Stack {
       timeout: Duration.seconds(20),
       memorySize: 2048,
       role: dynamodbRole,
-      environment: {
-        TABLE_NAME: recipeTable.tableName
-      },
+      environment: env,
       logRetention: RetentionDays.ONE_DAY
     })
 
@@ -86,6 +84,7 @@ export class FoodStack extends Stack {
       description: 'update recipe for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     })
 
@@ -97,6 +96,7 @@ export class FoodStack extends Stack {
       description: 'delete recipe for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     })
 
@@ -108,6 +108,7 @@ export class FoodStack extends Stack {
       description: 'postComment for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     })
 
@@ -119,6 +120,7 @@ export class FoodStack extends Stack {
       description: 'deleteComment for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     })    
 
@@ -130,6 +132,7 @@ export class FoodStack extends Stack {
       description: 'getComments for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     }) 
 
@@ -141,6 +144,7 @@ export class FoodStack extends Stack {
       description: 'updateComment for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     }) 
   
@@ -152,6 +156,7 @@ export class FoodStack extends Stack {
       description: 'postLike for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     })
 
@@ -163,6 +168,7 @@ export class FoodStack extends Stack {
       description: 'deleteLike for user',
       timeout: Duration.seconds(20),
       memorySize: 2048,
+      environment: env,
       role: dynamodbRole,
     })
 
@@ -187,8 +193,8 @@ export class FoodStack extends Stack {
     const deleteRecipeIntegration = new apiGateway.LambdaIntegration(deleteRecipeLambda);
     recipeEndpoints.addMethod('GET', getRecipeIntegration);
     recipeEndpoints.addMethod('POST', postRecipeIntegration);
-    recipeEndpoints.addMethod('PUT', putRecipeIntegration);
-    recipeEndpoints.addMethod('DELETE', deleteRecipeIntegration);
+    singleRecipeEndpoints.addMethod('PUT', putRecipeIntegration);
+    singleRecipeEndpoints.addMethod('DELETE', deleteRecipeIntegration);
     singleRecipeEndpoints.addMethod('GET', getRecipeIntegration);
     addCorsOptions(recipeEndpoints);
     addCorsOptions(singleRecipeEndpoints);
