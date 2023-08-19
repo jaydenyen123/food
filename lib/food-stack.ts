@@ -7,6 +7,7 @@ import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import {Duration} from 'aws-cdk-lib';
 import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
+import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 
 export class FoodStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -30,7 +31,6 @@ export class FoodStack extends Stack {
 
     const dynamodbRole = new iam.Role(this, 'DynamoDBRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com')
-    
     })
 
     const dynamoRecipePolicy = new iam.Policy(this, 'dynamoRecipePolicy', {
@@ -45,6 +45,7 @@ export class FoodStack extends Stack {
       ]
     })
 
+    dynamodbRole.addManagedPolicy(iam.ManagedPolicy.fromManagedPolicyArn(this, 'basicRole', 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'))  
 
     // Get recipe based on user, types, or all recipes
     const getRecipeLambda = new NodejsFunction(this, 'getRecipe', {
@@ -58,7 +59,8 @@ export class FoodStack extends Stack {
       role: dynamodbRole,
       environment: {
         TABLE_NAME: recipeTable.tableName
-      }
+      },
+      logRetention: RetentionDays.ONE_DAY
     })
 
     const postRecipeLambda = new NodejsFunction(this, 'postRecipe', {

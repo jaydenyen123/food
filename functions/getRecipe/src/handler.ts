@@ -1,6 +1,6 @@
 import {APIGatewayProxyEvent} from 'aws-lambda';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-import {DynamoDBDocumentClient, ScanCommand} from '@aws-sdk/lib-dynamodb'; 
+import {DynamoDBDocumentClient, ScanCommand, GetCommand} from '@aws-sdk/lib-dynamodb'; 
 
 
 class HttpError extends Error {
@@ -21,22 +21,43 @@ export const getRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise<an
     try {
         console.log('........event.............');
         console.log(event);
-        if(!event.body) throw new BadRequestError('Event does not have a body');
-        const body = JSON.parse(event.body);
-        console.log('........body.............');
-        console.log(body);
+        let response = null;
+        if(event.pathParameters) {
+            console.log("Looking for specific item");
+            const id = event.pathParameters.id;
+            const getCommand = new GetCommand({
+                TableName: process.env.TABLE_NAME,
+                Key: {
+                    recipeId: id
+                }
+            })
+            response = await documentClient.send(getCommand);
+            console.log('........response.............');
+            console.log(response);
+            return {
+                statusCode: 200,
+                body: JSON.stringify(response.Item)
+            }
+        }
         const scanCommand = new ScanCommand({
             TableName: process.env.TABLE_NAME
         })
-        const response = await documentClient.send(scanCommand);
+         response = await documentClient.send(scanCommand);
         if(response.Items) {
-            console.log('........response items.............');
-            return response.Items;
+            console.log('........response.............');
+            console.log(response);
+            return {
+                statusCode: 200,
+                body: JSON.stringify(response.Items)
+            }
         }
 
-    } catch(e) {
+    } catch(e: any) {
         console.log(e);
-        throw new Error('Error encountered');
+        return {
+            statusCode: 500,
+            body: e.message
+        }
     }
 
 }
