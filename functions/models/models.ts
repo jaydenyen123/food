@@ -1,20 +1,20 @@
-export class recipe {
+export class Recipe {
     recipeId: string;
     picture?: any;
     description?: string;
-    comments: comment[];
-    likes: likes[];
+    comments: Comment[];
+    likes: Like[];
     name: string;
 }
 
-export class comment {
+export class Comment {
     commentId: string;
     commentContent: string;
     author: string;
 }
 
 
-export class likes {
+export class Like {
     likeId: string;
     author: string;
 }

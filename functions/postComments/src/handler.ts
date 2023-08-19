@@ -1,8 +1,7 @@
 import {APIGatewayProxyEvent} from 'aws-lambda';
 import {DynamoDBDocumentClient, GetCommand, UpdateCommand} from "@aws-sdk/lib-dynamodb"; 
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
-
-
+import { v4 as uuidv4 } from 'uuid';
 
 class HttpError extends Error {
     status: number
@@ -14,7 +13,7 @@ class BadRequestError extends HttpError {
 
 export const postCommentAPIEvent = async (event: APIGatewayProxyEvent): Promise<any> => {
 
-    console.log('deleteComment started................');
+    console.log('postComment started................');
 
     const client = new DynamoDBClient();
     const documentClient = DynamoDBDocumentClient.from(client);
@@ -22,9 +21,19 @@ export const postCommentAPIEvent = async (event: APIGatewayProxyEvent): Promise<
     try {
         console.log('........event.............');
         console.log(event);
-        if(!event.pathParameters) throw new BadRequestError('event does not have pathParam to delete comment from');
+        if(!event.pathParameters || !event.pathParameters.id) {
+            return {
+                statusCode: 404,
+                body: 'cannot find recipe to post comment to'
+            }
+        }
+        if(!event.body) {
+            return {
+                statusCode: 404,
+                message: 'Cannot update content if body does not exist'
+            }
+        }
         const id = event.pathParameters.id;
-        const comment_id = event.pathParameters.comment_id;
 
         const getCommand = new GetCommand({
             TableName: process.env.TABLE_NAME,
@@ -36,26 +45,44 @@ export const postCommentAPIEvent = async (event: APIGatewayProxyEvent): Promise<
         const recipe = response.Item;
         console.log('recipe: ');
         console.log(recipe);
-        for(let i = 0; i < recipe?.comments.length; i++) {
-            if(recipe?.comments[i].id === comment_id)
-                recipe.comments.splice(i, 1);
+        if(!recipe) {
+            return {
+                statusCode: 404,
+                body: 'Cannot find recipe'
+            }
         }
+        const comments = recipe.comments;
+        const body = JSON.parse(event.body);
+        if(!body.commentContent) {
+            return {
+                statusCode: 400,
+                body: 'There is no content to update comment'
+            }
+        }
+        comments.push({commentId: uuidv4(), commentContent: body.commentContent})
         const updateCommand = new UpdateCommand({
             TableName: process.env.TABLE_NAME,
             Key: {
                 recipeId: id
             },
-            UpdateExpression: "set description = :description",
+            UpdateExpression: "set comments = :comments",
             ExpressionAttributeValues: {
-                ":comment": recipe?.comment,
+                ":comments": comments,
               },
               ReturnValues: "ALL_NEW",
 
         })
         const updateResponse = await documentClient.send(updateCommand); 
-    } catch(e) {
+        return {
+            statusCode: 200,
+            body: JSON.stringify(updateResponse)
+        }
+    } catch(e: any) {
         console.log(e);
-        throw new Error('Error encountered');
+        return {
+            statusCode: 400,
+            body: e.message
+        }
     }
 
 }

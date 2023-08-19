@@ -52,5 +52,4 @@ export const postRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise<a
             body: e.message
         }
     }
-
 }

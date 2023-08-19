@@ -1,7 +1,7 @@
 import {APIGatewayProxyEvent} from 'aws-lambda';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient, GetCommand} from '@aws-sdk/lib-dynamodb'; 
-import { comment } from '../../models/models';
+import { Comment } from '../../models/models';
 
 
 class HttpError extends Error {
@@ -15,9 +15,16 @@ class BadRequestError extends HttpError {
 export const getCommentsAPIEvent = async (event: APIGatewayProxyEvent): Promise<any> => {
 
     console.log('getComment started................');
-    if(!event.pathParameters) throw new BadRequestError('There is no pathParam for recipe');
+    if(!event.pathParameters || !event.pathParameters.id) throw new BadRequestError('No path param or id to find recipe');
     const recipeId = event.pathParameters.id;
     const commentId = event.pathParameters.comment_id;
+
+    if(!commentId) {
+        return {
+            statusCode: 404,
+            body: 'comment not found'
+        }
+    }
 
     const client = new DynamoDBClient();
     const documentClient = DynamoDBDocumentClient.from(client);
@@ -36,7 +43,7 @@ export const getCommentsAPIEvent = async (event: APIGatewayProxyEvent): Promise<
         const body = response.Item?.body;
         console.log('body: ');
         console.log(body);
-        const comment = body.comment.filter((comm: comment) => comm.commentId === commentId);
+        const comment = body.comment.filter((comm: Comment) => comm.commentId === commentId);
         return comment;
 
     } catch(e) {
