@@ -1,6 +1,7 @@
 import {APIGatewayProxyEvent} from 'aws-lambda';
 import {DynamoDBClient} from '@aws-sdk/client-dynamodb';
 import {DynamoDBDocumentClient, PutCommand} from '@aws-sdk/lib-dynamodb'; 
+import { v4 as uuidv4 } from 'uuid';
 
 class HttpError extends Error {
     status: number
@@ -12,7 +13,7 @@ class BadRequestError extends HttpError {
 
 export const postRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise<any> => {
 
-    console.log('getRecipe started................');
+    console.log('postRecipe started................');
 
     const client = new DynamoDBClient();
     const documentClient = DynamoDBDocumentClient.from(client);
@@ -26,9 +27,10 @@ export const postRecipeAPIEvent = async (event: APIGatewayProxyEvent): Promise<a
         console.log(body);
         console.log('..........item');
         const recipe = {
-            recipeId: '',
+            recipeId: uuidv4(),
             ...body
         }
+        console.log('Here is the recipe..............');
         console.log(recipe);
         const scanCommand = new PutCommand({
             TableName: process.env.TABLE_NAME,
