@@ -1,13 +1,14 @@
 import { RemovalPolicy, Stack, StackProps } from 'aws-cdk-lib';
 import * as aws_dynamodb from 'aws-cdk-lib/aws-dynamodb';
+import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
 import {Duration} from 'aws-cdk-lib';
 import * as apiGateway from 'aws-cdk-lib/aws-apigateway';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 
 export class FoodStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -19,15 +20,7 @@ export class FoodStack extends Stack {
       removalPolicy: RemovalPolicy.DESTROY
     });
 
-    const recipeImageBucket = new s3.Bucket(this, 'imageBucket', {
-      bucketName: 'recipe-image-jaylen',
-      removalPolicy: RemovalPolicy.DESTROY
-    })
 
-    const profilePictureBucket = new s3.Bucket(this, 'profileBucket', {
-      bucketName: 'profile-picture-jaylen',
-      removalPolicy: RemovalPolicy.DESTROY
-    })
 
     const dynamodbRole = new iam.Role(this, 'DynamoDBRole', {
       assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com')
@@ -172,6 +165,77 @@ export class FoodStack extends Stack {
       role: dynamodbRole,
     })
 
+    const purchaseLambda = new NodejsFunction(this, 'purchaseLambda', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      functionName: 'purchase',
+      handler: 'purchaseProcessor',
+      entry: 'functions/purchase/src/handler.ts',
+      description: 'asynchronous purchase processor',
+      timeout: Duration.seconds(20),
+      memorySize: 2048,
+      environment: env,
+      role: dynamodbRole,
+    })
+
+    const queue = new sqs.Queue(this, 'foodQueue', {
+      queueName: 'purchaseQueue',
+      visibilityTimeout: Duration.seconds(50)
+    });
+
+    purchaseLambda.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['sqs:ReceiveMessage'],
+      effect: iam.Effect.ALLOW,
+      resources: [queue.queueArn]
+    }))
+
+    const appApi = new apiGateway.RestApi(this, 'AppApi', {
+      restApiName: 'foodApi'
+    });
+
+    purchaseLambda.addEventSource(new SqsEventSource(queue, {batchSize: 1}))
+
+    const apiGatewayRole = new iam.Role(this, "APIGatewayRole", {
+      roleName: 'api-gateway-role-access',
+      assumedBy: new iam.ServicePrincipal('apigateway.amazonaws.com')
+    });
+
+    const SqsApiGatewayPolicy = new iam.Policy(this, 'SendMessagePolicy', {
+      statements: [
+        new iam.PolicyStatement({
+          actions: ['sqs:SendMessage'],
+          effect: iam.Effect.ALLOW,
+          resources: [queue.queueArn]
+        })
+      ]
+    })
+
+    apiGatewayRole.attachInlinePolicy(SqsApiGatewayPolicy);
+
+    const purchaseQueueApiGatewayIntegration = new apiGateway.Integration({
+      type: apiGateway.IntegrationType.AWS,
+      integrationHttpMethod: 'POST',
+      uri: 'arn:aws:apigateway:us-east-1:sqs:path/637094984608/purchaseQueue',
+      options: {
+        credentialsRole: apiGatewayRole,
+        passthroughBehavior: apiGateway.PassthroughBehavior.WHEN_NO_TEMPLATES,
+        requestParameters: {
+          'integration.request.header.Content-Type': '\'application/x-www-form-urlencoded\''
+        },
+        requestTemplates: {
+          'application/json': 'Action=SendMessage&MessageBody=$util.urlEncode($input.body)&MessageAttribute.1.Name=header&MessageAttribute.1.Value.StringValue=$util.urlEncode($util.escapeJavaScript($input.params().header))&MessageAttribute.1.Value.DataType=String'
+        },
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseTemplates: {
+              'application/json': '{"message": "SQS message sent"}'
+            }
+          }
+        ],
+      },
+
+    })
+
     // recipeTable.grantReadData(getRecipeLambda);
     // recipeTable.grantReadWriteData(postRecipeLambda);
     // recipeTable.grantReadWriteData(updateRecipeLambda);
@@ -181,11 +245,20 @@ export class FoodStack extends Stack {
     // recipeTable.grantReadWriteData(updateCommentLambda);
     // recipeTable.grantReadWriteData(deleteCommentLambda);
 
-    const appApi = new apiGateway.RestApi(this, 'AppApi', {
-      restApiName: 'foodApi'
-    });
+    
+
 
     const recipeEndpoints = appApi.root.addResource('recipe');
+    const recipePurchaseEndpoints = recipeEndpoints.addResource('purchase');
+    recipePurchaseEndpoints.addMethod('POST', purchaseQueueApiGatewayIntegration, 
+    {
+      methodResponses: [
+      {statusCode: '200'},
+      {statusCode: '400'}
+    ]
+  });
+
+
     const singleRecipeEndpoints = recipeEndpoints.addResource('{id}');
     const getRecipeIntegration = new apiGateway.LambdaIntegration(getRecipeLambda);
     const postRecipeIntegration = new apiGateway.LambdaIntegration(postRecipeLambda);
@@ -193,6 +266,7 @@ export class FoodStack extends Stack {
     const deleteRecipeIntegration = new apiGateway.LambdaIntegration(deleteRecipeLambda);
     recipeEndpoints.addMethod('GET', getRecipeIntegration);
     recipeEndpoints.addMethod('POST', postRecipeIntegration);
+    // recipePurchaseEndpoints.addMethod('POST', purchaseQueueApiGatewayIntegration);
     singleRecipeEndpoints.addMethod('PUT', putRecipeIntegration);
     singleRecipeEndpoints.addMethod('DELETE', deleteRecipeIntegration);
     singleRecipeEndpoints.addMethod('GET', getRecipeIntegration);
